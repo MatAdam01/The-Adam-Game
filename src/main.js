@@ -12,7 +12,7 @@ const ctx = canvas.getContext('2d');
 
 // Charger l'image de l'oiseau et créer une version sans fond blanc
 const birdImage = new Image();
-birdImage.src = './Images/bird.png';
+birdImage.src = '/The-Adam-Game/Images/bird.png';
 
 // Canvas temporaire pour enlever le fond blanc
 const birdCanvas = document.createElement('canvas');
@@ -1040,69 +1040,96 @@ function draw() {
   requestAnimationFrame(draw);
 }
 
+// Fonction pour gérer les actions de la barre d'espace (réutilisable pour touch)
+function handleSpaceAction(event) {
+  // Si on est dans le menu principal, commencer le jeu
+  if (inMainMenu) {
+    inMainMenu = false;
+    gameOver = false;
+    isPaused = false;
+    pauseStartTime = 0;
+    y = groundY - size/2;
+    velocityY = 0;
+    obstacles = [];
+    birds = [];
+    globalOffset = 0;
+    groundOffset = 0;
+    birdOffset = 0;
+    nextObstacleX = canvas.width + 200;
+    nextBirdX = canvas.width + 300;
+    score = 0;
+    lives = 2;
+    lastHitTime = 0;
+    scrollSpeed = 3;
+    speedLevel = 0;
+    farOffset.value = 0;
+    midOffset.value = 0;
+    nearOffset.value = 0;
+    rotationAngle = 0;
+    wasOnGround = true;
+    menuOffset = 0;
+    if (event) event.preventDefault();
+    return;
+  }
+  
+  if (gameOver) {
+    // Redémarrer directement le jeu sans passer par le menu
+    inMainMenu = false;
+    gameOver = false;
+    isPaused = false;
+    pauseStartTime = 0;
+    y = groundY - size/2;
+    velocityY = 0;
+    obstacles = [];
+    birds = [];
+    globalOffset = 0;
+    groundOffset = 0;
+    birdOffset = 0;
+    nextObstacleX = canvas.width + 200;
+    nextBirdX = canvas.width + 300;
+    score = 0;
+    lives = 2;
+    lastHitTime = 0;
+    scrollSpeed = 3;
+    speedLevel = 0;
+    farOffset.value = 0;
+    midOffset.value = 0;
+    nearOffset.value = 0;
+    rotationAngle = 0;
+    wasOnGround = true;
+    menuOffset = 0;
+    if (event) event.preventDefault();
+    return;
+  }
+
+  // Espace peut reprendre si en pause
+  if (isPaused) {
+    isPaused = false;
+    pauseStartTime = 0; // Réinitialiser le minuteur
+    if (event) event.preventDefault();
+    return;
+  }
+
+  // Sauter seulement si le jeu n'est pas en pause
+  if (!isPaused && y + size/2 >= groundY - 1) {
+    velocityY = jumpStrength;
+    if (event) event.preventDefault();
+  }
+}
+
 // Écouter les touches
 document.addEventListener('keydown', (event) => {
   // Si on est dans le menu principal, Espace ou Entrée commence le jeu
   if (inMainMenu) {
     if (event.code === 'Space' || event.code === 'Enter') {
-      inMainMenu = false;
-      gameOver = false;
-      isPaused = false;
-      pauseStartTime = 0;
-      y = groundY - size/2;
-      velocityY = 0;
-      obstacles = [];
-      birds = [];
-      globalOffset = 0;
-      groundOffset = 0;
-      birdOffset = 0;
-      nextObstacleX = canvas.width + 200;
-      nextBirdX = canvas.width + 300;
-      score = 0;
-      lives = 2;
-      lastHitTime = 0;
-      scrollSpeed = 3;
-      speedLevel = 0;
-      farOffset.value = 0;
-      midOffset.value = 0;
-      nearOffset.value = 0;
-      rotationAngle = 0;
-      wasOnGround = true;
-      menuOffset = 0;
-      event.preventDefault();
+      handleSpaceAction(event);
     }
     return;
   }
   
   if (gameOver) {
     if (event.code === 'Space') {
-      // Redémarrer directement le jeu sans passer par le menu
-      inMainMenu = false;
-      gameOver = false;
-      isPaused = false;
-      pauseStartTime = 0;
-      y = groundY - size/2;
-      velocityY = 0;
-      obstacles = [];
-      birds = [];
-      globalOffset = 0;
-      groundOffset = 0;
-      birdOffset = 0;
-      nextObstacleX = canvas.width + 200;
-      nextBirdX = canvas.width + 300;
-      score = 0;
-      lives = 2;
-      lastHitTime = 0;
-      scrollSpeed = 3;
-      speedLevel = 0;
-      farOffset.value = 0;
-      midOffset.value = 0;
-      nearOffset.value = 0;
-      rotationAngle = 0;
-      wasOnGround = true;
-      menuOffset = 0;
-      event.preventDefault();
-      // Ne pas appeler draw() ici car la boucle d'animation tourne déjà
+      handleSpaceAction(event);
     }
     return;
   }
@@ -1122,18 +1149,9 @@ document.addEventListener('keydown', (event) => {
     event.preventDefault();
     return;
   }
-  // Espace peut reprendre si en pause
-  if (event.code === 'Space' && isPaused) {
-    isPaused = false;
-    pauseStartTime = 0; // Réinitialiser le minuteur
-    event.preventDefault();
-    return;
-  }
-
-  // Sauter seulement si le jeu n'est pas en pause
-  if (!isPaused && event.code === 'Space' && y + size/2 >= groundY - 1) {
-    velocityY = jumpStrength;
-    event.preventDefault();
+  // Espace peut reprendre si en pause ou sauter
+  if (event.code === 'Space') {
+    handleSpaceAction(event);
   }
 });
 
@@ -1247,6 +1265,31 @@ canvas.addEventListener('click', (event) => {
     }
   }
 });
+
+// Gérer les touches tactiles (mobile) - même fonction que la barre d'espace
+let lastTouchTime = 0;
+const touchCooldown = 200; // 200ms entre les touches pour éviter les doubles touches
+
+canvas.addEventListener('touchend', (event) => {
+  const currentTime = Date.now();
+  // Éviter les doubles touches
+  if (currentTime - lastTouchTime < touchCooldown) {
+    event.preventDefault();
+    return;
+  }
+  lastTouchTime = currentTime;
+  
+  // Empêcher le scroll par défaut
+  event.preventDefault();
+  
+  // Appeler la même fonction que la barre d'espace
+  handleSpaceAction(event);
+});
+
+// Empêcher le scroll sur le canvas
+canvas.addEventListener('touchmove', (event) => {
+  event.preventDefault();
+}, { passive: false });
 
 // Initialiser la position du carré et des obstacles
 y = groundY - size/2;
